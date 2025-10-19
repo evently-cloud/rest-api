@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Channel SSE Headers",
+  "properties": {
+    "authorization": {
+      "type": "string",
+      "description": "Do not make this required, it blocks the 401 status code, which is more helpful than 400.",
+      "pattern": "^Bearer [0-9A-Za-z-._~+/]+=*$"
+    },
+    "last-event-id": {
+      "type": "string",
+      "pattern": "^\"[0-9a-f]{32}\"$"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Selector Headers",
+  "properties": {
+    "authorization": {
+      "type": "string",
+      "description": "Do not make this required, it blocks the 401 status code, which is more helpful than 400.",
+      "pattern": "^Bearer [0-9A-Za-z-._~+/]+=*$"
+    },
+    "if-none-match": {
+      "type": "string",
+      "pattern": "^\"[0-9a-f]{32}\"$"
+    },
+    "accept-encoding": {
+      "type": "string"
+    },
+    "prefer": {
+      "type": "string",
+      "enum": [
+        "return=representation",
+        "return=minimal"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

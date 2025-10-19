@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Persisted Event",
+  "description": "The schema for persisted events",
+  "properties": {
+    "event": {
+      "type": "string"
+    },
+    "eventId": {
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "The timestamp when this event was persisted in the ledger.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "entities": {
+      "type": "object",
+      "description": "The key is the name of the entity, value is an array of entity ID values.",
+      "patternProperties": {
+        "^[^\\x00-\\x1F\\x80-\\x9F]{1,80}$": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "data": {
+      "description": "Event data can be any type of data, from a string to an object with multiple values. The data is specific to the entity event.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": ["event", "eventId", "timestamp", "entities", "meta", "data"]
+}

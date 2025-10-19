@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Channel Subscription Path Parameters",
+  "properties": {
+    "channelId": {
+      "type": "string"
+    },
+    "subscriptionId": {
+      "type": "string",
+      "pattern": "^[0-9A-Za-z_-]{2,}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["channelId", "subscriptionId"
+  ]
+}

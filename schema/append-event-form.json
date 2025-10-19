@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Append Event Form",
+  "description": "Append an event to the ledger by creating a request body that matches this schema and POSTing it back to APPEND_URI endpoint. If provided, the `selector` will be checked first to see if new matching events have been appended, and if none have been, then this event will be appended.",
+  "definitions": {
+    "name-string": {
+      "type": "string",
+      "pattern": "^[^\\x00-\\x1F\\x80-\\x9F]{1,200}$"
+    },
+    "jsonData": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object"
+        },
+        {
+          "type": "array"
+        }
+      ]
+    },
+    "entities": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[^\\x00-\\x1F\\x80-\\x9F]{1,80}$": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "jsonpathQuery": {
+      "description": "JSONPath query to filter JSON objects.",
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "A JSONPath query statement. Can include named variables, like '$age' or '$orderNumber'."
+        },
+        "vars": {
+          "description": "If the query contains named variables, they are stored in this object. The object keys are the variable names, without the preceding '$', like 'age' and 'orderNumber'.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "metaQuery": {
+      "$ref": "#/definitions/jsonpathQuery",
+      "description": "SQL JSONPath filter on the event's meta object.",
+      "examples": [
+        {
+          "query": "$.correlationId ? (@==$correlationId)",
+          "vars": "some-correlation-id"
+        },
+        {
+          "query": "$.year ? (@==1998)"
+        }
+      ]
+    },
+    "dataQuery": {
+      "$comment": "The event name is the key, value is jsonpath query filtering the events.",
+      "type": "object",
+      "description": "Filter by event data values. Keys are event names, and the values are SQL JSONPath query objects.",
+      "additionalProperties": {
+        "$ref": "#/definitions/jsonpathQuery"
+      },
+      "examples": [
+        {
+          "game-started": {
+            "query": "$ ? (@.player1Key==\"Eugene_Harris\"||@.player2Key==\"Eugene_Harris\")"
+          },
+          "game-completed": {
+            "query": "$.winnerKey ? (@==$player)",
+            "vars": {
+              "player": "Eugene_Harris"
+            }
+          }
+        }
+      ]
+    },
+    "after": {
+      "description": "Select events that occur after this event ID.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    }
+  },
+  "properties": {
+    "event": {
+      "$ref": "#/definitions/name-string",
+      "description": "Name of the event being appended."
+    },
+    "entities": {
+      "$ref": "#/definitions/entities",
+      "description": "The key is the name of the entity, value is an array of entity ID values."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Event metadata. Use properties that are common to all events, like correlationId, actor and causationId. Evently creates an append timestamp value automatically, so clients can omit putting a timestamp in meta."
+    },
+    "data": {
+      "$ref":  "#/definitions/jsonData",
+      "description": "Event data can be any type of data, from a string to an object with multiple values. The data is specific to the event."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique key identifying the append event's idempotency. This key will instruct evently to ignore duplicate append submissions instead of sending an error response."
+    },
+    "selector": {
+      "type": "object",
+      "description": "Identifies the selector to use to check for new events. If new events match the selector, then the append event is rejected.",
+      "anyOf": [
+        {
+          "properties": {
+            "after": {
+              "$ref": "#/definitions/after"
+            },
+            "entities": {
+              "$ref": "#/definitions/entities"
+            },
+            "events": {
+              "$ref": "#/definitions/dataQuery"
+            },
+            "meta": {
+              "$ref": "#/definitions/metaQuery"
+            }
+          },
+          "required": [
+            "entities"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "after": {
+              "$ref": "#/definitions/after"
+            },
+            "entities": {
+              "$ref": "#/definitions/entities"
+            },
+            "events": {
+              "$ref": "#/definitions/dataQuery"
+            },
+            "meta": {
+              "$ref": "#/definitions/metaQuery"
+            }
+          },
+          "required": [
+            "events"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "after": {
+              "$ref": "#/definitions/after"
+            },
+            "entities": {
+              "$ref": "#/definitions/entities"
+            },
+            "events": {
+              "$ref": "#/definitions/dataQuery"
+            },
+            "meta": {
+              "$ref": "#/definitions/metaQuery"
+            }
+          },
+          "required": [
+            "meta"
+          ],
+          "additionalProperties": false
+
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "event",
+    "entities"
+  ]
+}

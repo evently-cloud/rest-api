@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "selector-query.json",
+  "title": "Selector Query",
+  "description": "Selector query filters the ledger for matching events.",
+  "definitions": {
+    "name-string": {
+      "type": "string",
+      "pattern": "^[^\\x00-\\x1F\\x80-\\x9F]{1,200}$"
+    },
+    "jsonpathQuery": {
+      "description": "JSONPath query to filter JSON objects.",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "A JSONPath query statement. Can include named variables, like '$age' or '$orderNumber'."
+        },
+        "vars": {
+          "description": "If the query contains named variables, they are stored in this object. The object keys are the variable names, without the preceding '$', like 'age' and 'orderNumber'.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "entities": {
+      "type": "object",
+      "description": "The entity name is the key, value is an entity key, or array of keys.",
+      "patternProperties": {
+        "^[^\\x00-\\x1F\\x80-\\x9F]{1,80}$": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metaQuery": {
+      "$ref": "#/definitions/jsonpathQuery",
+      "description": "SQL JSONPath filter on the event's meta object.",
+      "examples": [
+        {
+          "query": "$.correlationId ? (@==$correlationId)",
+          "vars": "some-correlation-id"
+        },
+        {
+          "query": "$.actor ? (@==\"gerry_woo\")"
+        }
+      ]
+    },
+    "dataQuery": {
+      "$comment": "The event name is the key, value is jsonpath query filtering the events.",
+      "type": "object",
+      "description": "Filter by event data values. Keys are event names, and the values are SQL JSONPath query objects.",
+      "additionalProperties": {
+        "$ref": "#/definitions/jsonpathQuery"
+      },
+      "examples": [
+        {
+          "game-started": {
+            "query": "$ ? (@.player1Key==\"Eugene_Harris\"||@.player2Key==\"Eugene_Harris\")"
+          },
+          "game-completed": {
+            "query": "$.winnerKey ? (@==$player)",
+            "vars": {
+              "player": "Eugene_Harris"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+    "properties": {
+      "entities": {
+        "$ref": "#/definitions/entities"
+      },
+      "events": {
+        "$ref": "#/definitions/dataQuery"
+      },
+      "meta": {
+        "$ref": "#/definitions/metaQuery"
+      }
+    },
+  "additionalProperties": false
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Reset Ledger Form",
+  "description": "Form to reset a ledger's events, either entirely or after an event ID. Use this schema to create a reset command and POST it back to RESET_URI endpoint.",
+  "properties": {
+    "after": {
+      "description": "Remove all events that occur after this event ID.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

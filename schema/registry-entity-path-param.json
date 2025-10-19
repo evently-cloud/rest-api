@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Registry Entity Path Parameter",
+  "properties": {
+    "entity": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^[^\\x00-\\x1F\\x80-\\x9F]+$"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["entity"]
+}

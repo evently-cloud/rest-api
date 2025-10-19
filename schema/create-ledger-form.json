@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Create Ledger Form",
+  "description": "Create a new Ledger. Use this schema to create a ledger definition and POST it back to the CREATE_URI endpoint.",
+  "properties": {
+    "name": {
+      "description": "The name of the ledger.",
+      "minLength": 2,
+      "maxLength": 500,
+      "type": "string"
+    },
+    "description": {
+      "description": "A description of the ledger's purpose.",
+      "maxLength": 2000,
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["name", "description"]
+}

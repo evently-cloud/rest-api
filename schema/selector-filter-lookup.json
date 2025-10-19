@@ -1,0 +1,157 @@
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "Selector Filter Lookup",
+  "description": "Lookup resource to filter the ledger for matching events. Use this JSON Schema to construct a JSON object and POST it back to FILTER_URI endpoint.",
+  "definitions": {
+    "jsonpathQuery": {
+      "description": "JSONPath query to filter JSON objects.",
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "A JSONPath query statement. Can include named variables, like '$age' or '$orderNumber'."
+        },
+        "vars": {
+          "description": "If the query contains named variables, they are stored in this object. The object keys are the variable names, without the preceding '$', like 'age' and 'orderNumber'.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "metaQuery": {
+      "$ref": "#/definitions/jsonpathQuery",
+      "description": "SQL JSONPath filter on the event's meta object.",
+      "examples": [
+        {
+          "query": "$.correlationId ? (@==$correlationId)",
+          "vars": "some-correlation-id"
+        },
+        {
+          "query": "$.actor ? (@==\"gerry_woo\")"
+        }
+      ]
+    },
+    "dataQuery": {
+      "$comment": "The event name is the key, value is jsonpath query filtering the events.",
+      "type": "object",
+      "description": "Filter by event data values. Keys are event names, and the values are SQL JSONPath query objects.",
+      "additionalProperties": {
+        "$ref": "#/definitions/jsonpathQuery"
+      },
+      "examples": [
+        {
+          "game-started": {
+            "query": "$ ? (@.player1Key==\"Eugene_Harris\"||@.player2Key==\"Eugene_Harris\")"
+          },
+          "game-completed": {
+            "query": "$.winnerKey ? (@==$player)",
+            "vars": {
+              "player": "Eugene_Harris"
+            }
+          }
+        }
+      ]
+    },
+    "after": {
+      "description": "Select events that occur after this event ID.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "limit": {
+      "description": "Limit the number of returned events to this value. Useful for clients that cannot stream the events but must consume the entire result body before processing.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "entities": {
+      "type": "object",
+      "description": "The entity name is the key, value is an entity key, or array of keys.",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[^\\x00-\\x1F\\x80-\\x9F]{1,80}$": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "anyOf": [
+    {
+      "properties": {
+        "after": {
+          "$ref": "#/definitions/after"
+        },
+        "limit": {
+          "$ref": "#/definitions/limit"
+        },
+        "entities": {
+          "$ref": "#/definitions/entities"
+        },
+        "events": {
+          "$ref": "#/definitions/dataQuery"
+        },
+        "meta": {
+          "$ref": "#/definitions/metaQuery"
+        }
+      },
+      "required": [
+        "entities"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "after": {
+          "$ref": "#/definitions/after"
+        },
+        "limit": {
+          "$ref": "#/definitions/limit"
+        },
+        "entities": {
+          "$ref": "#/definitions/entities"
+        },
+        "events": {
+          "$ref": "#/definitions/dataQuery"
+        },
+        "meta": {
+          "$ref": "#/definitions/metaQuery"
+        }
+      },
+      "required": [
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "after": {
+          "$ref": "#/definitions/after"
+        },
+        "limit": {
+          "$ref": "#/definitions/limit"
+        },
+        "entities": {
+          "$ref": "#/definitions/entities"
+        },
+        "events": {
+          "$ref": "#/definitions/dataQuery"
+        },
+        "meta": {
+          "$ref": "#/definitions/metaQuery"
+        }
+      },
+      "required": [
+        "meta"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

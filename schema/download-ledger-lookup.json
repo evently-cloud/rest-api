@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Download Ledger Lookup",
+  "description": "Download a ledger's events, either entirely or after an event ID. Use this schema to create a download command and POST it back to DOWNLOAD_URI endpoint. To download all the events, send an empty JSON object in the request.",
+  "properties": {
+    "after": {
+      "description": "Download events that exist after this event ID.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "limit": {
+      "description": "Limit the number of returned events to this value.",
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}

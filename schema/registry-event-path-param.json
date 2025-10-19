@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "title": "Registry Event Path Parameter",
+  "definitions": {
+    "name-string": {
+      "type": "string",
+      "pattern": "^[^\\x00-\\x1F\\x80-\\x9F]{1,200}$"
+    }
+  },
+  "properties": {
+    "event": {
+      "$ref": "#/definitions/name-string"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["event"]
+}
