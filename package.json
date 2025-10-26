@@ -10,11 +10,11 @@
     "build": "tsc",
     "clean": "rm -rf dist yarn-error.log",
     "generate-types": "json2ts --cwd schema -i schema -o src/api/type --no-style.semi",
-    "launch": "tsx --env-file ../env/local-dev.env src/index.ts",
-    "debug": "tsx --env-file ../env/local-dev.env src/index.ts",
-    "start": "node --trace-warnings --env-file ../env/local-dev.env dist/src/index.js",
-    "profile": "node --env-file ../env/local-dev.env --trace_gc dist/index.js",
-    "trace-events": "tsx --env-file ../env/local-dev.env --trace-event-categories v8,node,node.async_hooks dist/index.js"
+    "launch": "tsx --env-file ./env/evently.env src/index.ts",
+    "debug": "tsx --env-file ./env/evently.env src/index.ts",
+    "start": "node --trace-warnings --env-file ./env/evently.env dist/src/index.js",
+    "profile": "node --env-file ./env/evently.env --trace_gc dist/index.js",
+    "trace-events": "tsx --env-file ./env/evently.env --trace-event-categories v8,node,node.async_hooks dist/index.js"
   },
   "devDependencies": {
     "@types/http-errors": "2.0.5",
