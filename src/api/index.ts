@@ -40,12 +40,14 @@ export function launch(shutdown:  ShutdownHookRegistrar,
 
   const server = fastify({
     loggerInstance:         logger,
-    caseSensitive:          false,
     disableRequestLogging:  true,
     exposeHeadRoutes:       true,
-    ignoreTrailingSlash:    true,
-    maxParamLength:         2048,   // default is 100
-    trustProxy:             true
+    trustProxy:             true,
+    routerOptions: {
+      caseSensitive:          false,
+      ignoreTrailingSlash:    true,
+      maxParamLength:         2048  // default is 100
+    }
   }) as unknown as FastifyInstance  // fastify type def is horrendous
 
   server.addSchema(AuthorizationHeaderSchema)
