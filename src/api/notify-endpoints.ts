@@ -273,6 +273,7 @@ function initHandleGetChannelSSE(channels: Channels) {
         channelId
       }
     } = request
+    reply.header(HEADERS.PROFILE, L3_PROFILES.INFO)
     const lastEventId = headers[HEADERS.LAST_EVENT_ID]
     const ledger = getLedgerFromRequestCtx(request)
     const eventStream = channels.openEventStream(ledger, channelId, lastEventId)
