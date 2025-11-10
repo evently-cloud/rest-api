@@ -183,7 +183,7 @@ function initHandleGetLedgers(ledgers: Ledgers) {
       description: "List of Ledgers",
       _links: {
         [L3_RELS.LIST_ENTRY]: ledgerLinks,
-        [L3_RELS.ADD_ENTRY]:  {
+        [L3_RELS.ADD_ENTRY]: {
           title:    "Create a new Ledger",
           href:     PATHS.CREATE,
           profile:  linkProfile(L3_PROFILES.FORM)

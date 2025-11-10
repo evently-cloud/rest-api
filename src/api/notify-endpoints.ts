@@ -237,7 +237,8 @@ function initHandleGetChannel(channels: Channels) {
         },
         stream: {
           title:    "Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events",
-          href:     PATHS.SSE.replace(CHANNEL_ID, channelId)
+          href:     PATHS.SSE.replace(CHANNEL_ID, channelId),
+          profile:  linkProfile(L3_PROFILES.INFO)
         }
       }
     }
@@ -354,14 +355,15 @@ function initHandleGetSubscriptions(channels: Channels) {
     const subscriptionsResponse: HALObject = {
       _links: {
         [L3_RELS.LIST_ENTRY]: subLinks,
-        [L3_RELS.ADD_ENTRY]:  {
+        [L3_RELS.ADD_ENTRY]: {
           title:    "Selector subscription form",
           href:     PATHS.SUBSCRIBE.replace(CHANNEL_ID, channelId),
           profile:  linkProfile(L3_PROFILES.FORM)
         },
         stream: {
-          title:  "Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events",
-          href:   PATHS.SSE.replace(CHANNEL_ID, channelId)
+          title:    "Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events",
+          href:     PATHS.SSE.replace(CHANNEL_ID, channelId),
+          profile:  linkProfile(L3_PROFILES.INFO)
         }
       }
     }

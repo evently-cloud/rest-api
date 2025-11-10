@@ -194,9 +194,9 @@ function initHandleGetEntities(registry: Registry) {
     }))
     const response: HALObject = {
       description:  "Entities that have events registered for them.",
-      _links:       {
-        [L3_RELS.LIST_ENTRY]:  entityLinks,
-        [L3_RELS.ADD_ENTRY]:   {
+      _links: {
+        [L3_RELS.LIST_ENTRY]: entityLinks,
+        [L3_RELS.ADD_ENTRY]: {
           title:    "Register an Event",
           href:     PATHS.REGISTER_EVENT,
           profile:  linkProfile(L3_PROFILES.FORM)
@@ -237,7 +237,7 @@ function initGetEntity(registry: Registry) {
       name:   entity,
       _links: {
         [L3_RELS.LIST_ENTRY]: eventLinks,
-        [L3_RELS.ADD_ENTRY]:   {
+        [L3_RELS.ADD_ENTRY]: {
           title:    "Register an Event",
           href:     PATHS.REGISTER_EVENT,
           profile:  linkProfile(L3_PROFILES.FORM)
@@ -278,7 +278,7 @@ function initHandleGetEvents(registry: Registry) {
     const response: HALObject = {
       _links: {
         [L3_RELS.LIST_ENTRY]: eventLinks,
-        [L3_RELS.ADD_ENTRY]:   {
+        [L3_RELS.ADD_ENTRY]: {
           title:    "Register an Event",
           href:     PATHS.REGISTER_EVENT,
           profile:  linkProfile(L3_PROFILES.FORM)
