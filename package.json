@@ -19,7 +19,7 @@
   "devDependencies": {
     "@types/http-errors": "2.0.5",
     "@types/lodash-es": "4.17.12",
-    "@types/node": "24.10.0",
+    "@types/node": "24.10.1",
     "json-schema-to-typescript": "15.0.4",
     "pino-pretty": "13.1.2",
     "tsx": "4.20.6",
@@ -31,7 +31,7 @@
     "@fastify/cors": "11.1.0",
     "@fastify/request-context": "6.2.1",
     "@js-joda/core": "5.6.5",
-    "@paralleldrive/cuid2": "3.0.4",
+    "@paralleldrive/cuid2": "3.1.0",
     "close-with-grace": "2.3.0",
     "fast-json-stringify": "6.1.1",
     "fast-rbac": "2.0.1",
@@ -50,6 +50,6 @@
     "specified": "1.0.2",
     "sql-jsonpath-js": "1.0.1",
     "toad-cache": "3.7.0",
-    "weakref": "0.2.1"
+    "weakref": "0.2.2"
   }
 }
