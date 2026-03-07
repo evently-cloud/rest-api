@@ -1,6 +1,5 @@
 import { Instant } from "@js-joda/core"
 import createHttpError from "http-errors"
-import { concat, flatMap, pipeAsync } from "iter-ops"
 import Long from "long"
 import P from "pino"
 import PG, { Sql } from "postgres"
@@ -157,20 +156,32 @@ async function continueSelector(logger:         P.Logger,
       checksum: checksum.toUnsigned().toInt()
     }
     /*
-      Problem with this approach is that AsyncGenerator does not buffer or read ahead. I want a push stream
+      A problem with this approach is that AsyncGenerator does not buffer or read ahead. I want a push stream
       to fetch more rows while the previous ones are being sent to the client.
      */
-    const batchIterator = selectEvents(sql, startPosition, limit, selectorBytes)
-    events = pipeAsync(
-      firstBatch,
-      concat(batchIterator),
-      flatMap(rowToEvent))
+    events = streamPersistedEvents(sql, startPosition, limit, selectorBytes, firstBatch, rowToEvent)
   }
 
   const eventStream = Readable.from(events)
   return {
     position,
     eventStream
+  }
+}
+
+
+async function* streamPersistedEvents(sql:            Sql,
+                                      startPosition:  EventID,
+                                      limit:          number,
+                                      selectorBytes:  Uint8Array,
+                                      firstBatch:     EventRow[],
+                                      rowToEvent:     (row: EventRow) => PersistedEvent): AsyncGenerator<PersistedEvent> {
+  for (const row of firstBatch) {
+    yield rowToEvent(row)
+  }
+
+  for await (const row of selectEvents(sql, startPosition, limit, selectorBytes)) {
+    yield rowToEvent(row)
   }
 }
 
