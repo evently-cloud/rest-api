@@ -1,12 +1,11 @@
 import createHttpError from "http-errors"
-import { isEmpty, pickBy } from "lodash-es"
-import { constrain, Constraint, optional, Spec, Type, verify } from "specified"
+import {pickBy} from "lodash-es"
+import {constrain, Constraint, optional, Spec, Type, verify} from "specified"
 
-import { fromURIPart, nonEmptyStringArraySpec, toURIPart } from "./api/api-utils.ts"
+import {fromURIPart, nonEmptyStringArraySpec, toURIPart} from "./api/api-utils.ts"
 
-import { fromEventIdBytes, toEventIdBytes } from "./eventId-utils.ts"
-import { DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector, UnknownObject } from "./types.ts"
-
+import {fromEventIdBytes, toEventIdBytes} from "./eventId-utils.ts"
+import {DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector, UnknownObject} from "./types.ts"
 
 
 export function decodeSelector(encodedSelector: string): Selector {
@@ -60,7 +59,7 @@ const includeInCompressed = (value: any): boolean =>
   // Number check is for limit, which must be a positive integer
   Number.isInteger(value)
     ? value > 0
-    : !isEmpty(value)
+    : isNotEmpty(value)
 
 
 type CompressedSelectorForm = {
@@ -202,4 +201,18 @@ export function sortUnknown(value: unknown): unknown {
       : sortObject(value as UnknownObject)
   }
   return Object.freeze(value)
+}
+
+
+export function isNotEmpty<T>(value: T | null | undefined): value is T {
+  if (value === null || value === undefined) {
+    return false
+  }
+  if (typeof value === "object") {
+    const length = Array.isArray(value)
+      ? value.length
+      : Object.keys(value).length
+    return length > 0
+  }
+  return true
 }

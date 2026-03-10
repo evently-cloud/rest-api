@@ -1,7 +1,5 @@
-import { isEmpty } from "lodash-es"
-
-import { isFilterSelector } from "../selector-utils.ts"
-import { DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector } from "../types.ts"
+import {isFilterSelector, isNotEmpty} from "../selector-utils.ts"
+import {DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector} from "../types.ts"
 
 
 export function unknownSelectorToSql(selector: Selector): string {
@@ -37,15 +35,15 @@ export function filterSelectorToSql(selector: FilterSelector): string {
 
   const queries = []
 
-  if (!isEmpty(entities)) {
+  if (isNotEmpty(entities)) {
     queries.push(generateEntitiesQuery(entities))
   }
 
-  if (!isEmpty(meta)) {
+  if (isNotEmpty(meta)) {
     queries.push(jsonpathToSql("meta", meta))
   }
 
-  if (!isEmpty(events)) {
+  if (isNotEmpty(events)) {
     queries.push(generateEventsQuery(events))
   }
 
@@ -66,7 +64,7 @@ entities: [{
 
   SQL/JSONPath is sadly missing a right-side array unwrapping for statements, so you can't do this:
      entities @? '$."cart" ? (@==[1,2])'
-  It will do this with named vars, however. That requires using jsonb_path_exists, so it uses seq scan instaed
+  It will do this with named vars, however. That requires using jsonb_path_exists, so it uses seq scan instead
   of the GIN index.
  */
 function generateEntitiesQuery(entities: EntitiesRecord) {
