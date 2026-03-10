@@ -1,5 +1,4 @@
 import createHttpError from "http-errors"
-import { pickBy } from "lodash-es"
 import { constrain, Constraint, optional, Spec, Type, verify } from "specified"
 
 import { fromURIPart, nonEmptyStringArraySpec, toURIPart } from "./api/api-utils.ts"
@@ -41,7 +40,7 @@ export function encodeFilterSelector(selector: FilterSelector): string {
   const m = meta && jsonpathToCompressedJsonpath(meta)
   const d = events && eventsToCompressedData(events)
   const a = after && toEventIdBytes(after)
-  const compressed = pickBy({e, m, d, a, l}, includeInCompressed)
+  const compressed = prepareCompressed({e, m, d, a, l})
   return toURIPart(compressed)
 }
 
@@ -49,16 +48,9 @@ export function encodeFilterSelector(selector: FilterSelector): string {
 function encodeSelector(selector: Selector): string {
   const {after, limit: l} = selector
   const a = after && toEventIdBytes(after)
-  const compressed = pickBy({a, l}, includeInCompressed)
+  const compressed = prepareCompressed({a, l})
   return toURIPart(compressed)
 }
-
-
-const includeInCompressed = (value: any): boolean =>
-  // Number check is for limit, which must be a positive integer
-  Number.isInteger(value)
-    ? value > 0
-    : isNotEmpty(value)
 
 
 type CompressedSelectorForm = {
@@ -108,7 +100,7 @@ const compressedFilterSpec = Type.object({
 function jsonpathToCompressedJsonpath(jsonpath: JsonpathFilter): CompressedJsonpath {
   const {query: q, vars} = jsonpath
   const v = vars && sortObject(vars)
-  const compressed = pickBy({q, v}, includeInCompressed) as unknown as CompressedJsonpath
+  const compressed = prepareCompressed({q, v}) as unknown as CompressedJsonpath
   return Object.freeze(compressed)
 }
 
@@ -164,6 +156,24 @@ function compressedFilterToSelector(compressed: CompressedFilterForm): FilterSel
     after,
     limit
    }
+}
+
+
+function prepareCompressed(object: UnknownObject): UnknownObject {
+  const compressed: UnknownObject = {}
+  for (const key of Object.keys(object)) {
+    if (includeInCompressed(object[key])) {
+      compressed[key] = object[key]
+    }
+  }
+  return compressed
+}
+
+function includeInCompressed(value: any): boolean {
+  // Number check is for limit, which must be a positive integer
+  return Number.isInteger(value)
+    ? value > 0
+    : isNotEmpty(value)
 }
 
 
