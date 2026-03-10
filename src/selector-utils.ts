@@ -1,11 +1,10 @@
 import createHttpError from "http-errors"
-import {pickBy} from "lodash-es"
-import {constrain, Constraint, optional, Spec, Type, verify} from "specified"
+import { pickBy } from "lodash-es"
+import { constrain, Constraint, optional, Spec, Type, verify } from "specified"
 
-import {fromURIPart, nonEmptyStringArraySpec, toURIPart} from "./api/api-utils.ts"
-
-import {fromEventIdBytes, toEventIdBytes} from "./eventId-utils.ts"
-import {DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector, UnknownObject} from "./types.ts"
+import { fromURIPart, nonEmptyStringArraySpec, toURIPart } from "./api/api-utils.ts"
+import { fromEventIdBytes, toEventIdBytes } from "./eventId-utils.ts"
+import { DataFilter, EntitiesRecord, FilterSelector, JsonpathFilter, Selector, UnknownObject } from "./types.ts"
 
 
 export function decodeSelector(encodedSelector: string): Selector {
@@ -213,6 +212,50 @@ export function isNotEmpty<T>(value: T | null | undefined): value is T {
       ? value.length
       : Object.keys(value).length
     return length > 0
+  }
+  return true
+}
+
+
+function isObject(value: unknown): value is object {
+  return value != null && typeof value === "object"
+}
+
+export function areEqual(v1: unknown, v2: unknown): boolean {
+  return isObject(v1) && isObject(v2)
+    ? objectsEqual(v1, v2)
+    : v1 === v2
+}
+
+function objectsEqual(o1: Record<string, any> | any[], o2: Record<string, any> | any[]): boolean {
+  const isArr = Array.isArray(o1)
+  if (isArr !== Array.isArray(o2)) {
+    return false
+  }
+  if (isArr) {
+    return arraysEqual(o1, o2 as any[])
+  }
+  const keys1 = Object.keys(o1)
+  if (keys1.length !== Object.keys(o2).length) {
+    return false
+  }
+  for (const key of keys1) {
+    // @ts-ignore o1 and o2 are objects
+    if (!areEqual(o1[key], o2[key])) {
+      return false
+    }
+  }
+  return true
+}
+
+function arraysEqual(a1: any[], a2: any[]) {
+  if (a1.length !== a2.length) {
+    return false
+  }
+  for (let i = 0; i < a1.length; i++) {
+    if (!areEqual(a1[i], a2[i])) {
+      return false
+    }
   }
   return true
 }

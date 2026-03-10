@@ -1,6 +1,5 @@
 import { createId } from "@paralleldrive/cuid2"
 import createHttpError from "http-errors"
-import { isEqual } from "lodash-es"
 import Long from "long"
 import P from "pino"
 import PG, { Sql } from "postgres"
@@ -10,6 +9,7 @@ import { unknownSelectorToSql } from "../db/selector-sql.ts"
 import { toEventIdString } from "../eventId-utils.ts"
 import { stringToBytes } from "../hex-utils.ts"
 import { Registry } from "../registry/index.ts"
+import { areEqual } from "../selector-utils.ts"
 import { EventID, Ledger, Selector } from "../types.ts"
 import { AppendEvent, AppendResult, Result } from "./index.ts"
 
@@ -217,9 +217,9 @@ async function maybeIdempotent(logger:        P.Logger,
     }] = result
 
     if (event === storedEvent
-        && isEqual(storedEntities, entities)
-        && isEqual(storedMeta, meta)
-        && isEqual(storedData, data)) {
+        && areEqual(storedEntities, entities)
+        && areEqual(storedMeta, meta)
+        && areEqual(storedData, data)) {
 
       const eventId = toEventIdString(storedTimestamp, storedChecksum.toUnsigned().toInt(), ledgerId)
       appendResult = {
