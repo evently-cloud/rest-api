@@ -1,10 +1,9 @@
 import createHttpError, { HttpError } from "http-errors"
-import { omitBy } from "lodash-es"
 import Long from "long"
 import P from "pino"
 import PG, { Options, Sql } from "postgres"
 
-import { ShutdownHookRegistrar } from "../types.ts"
+import {ShutdownHookRegistrar, UnknownObject} from "../types.ts"
 
 declare module "postgres" {
   // 1. Expand the parameter type to allow Long
@@ -85,7 +84,7 @@ function gatherConfig(logger: P.Logger, typeOpts: Options<any>): string | Option
   }
 
   //pg checks for the existence of keys, so take out the undefined and empty keys.
-  const config = omitBy(envConfig, (v) => !v)
+  const config = omitEmpty(envConfig)
   // don't log the password, but show that one was supplied if present
   const loggable = {...config}
   if (loggable.password) {
@@ -94,6 +93,17 @@ function gatherConfig(logger: P.Logger, typeOpts: Options<any>): string | Option
   logger.info("pg config: %j", loggable)
 
   return config
+}
+
+function omitEmpty<T extends UnknownObject>(obj: T): Partial<T> {
+  const newObj: Partial<T> = {}
+  for (const [key, value] of Object.entries(obj) as [keyof T, T[keyof T]][]) {
+    // omit empty strings.
+    if (value) {
+      newObj[key] = value
+    }
+  }
+  return newObj
 }
 
 
