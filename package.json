@@ -41,7 +41,7 @@
     "fastify-sse-v2": "4.2.2",
     "http-errors": "2.0.1",
     "long": "5.3.2",
-    "msgpackr": "1.11.8",
+    "msgpackr": "1.11.9",
     "pino": "10.3.1",
     "postgres": "3.4.8",
     "specified": "1.0.2",
