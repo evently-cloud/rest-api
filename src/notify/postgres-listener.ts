@@ -116,7 +116,7 @@ async function handleEventNotify(logger:    P.Logger,
 
 
 /*
-  Incoming notification is a CSV:
+  Incoming notification is a list, separated with \t:
 
   0: ledger_id
   1: timestamp
@@ -128,7 +128,7 @@ async function handleEventNotify(logger:    P.Logger,
   6: data
  */
 
-const fieldPattern = /[E]?'((?:[^']|'')*)'|[^,]+/g
+const fieldPattern = /E?'((?:[^']|'')*)'|[^\t]+/g
 
 function rowToEventRow(row: string): NotifyRow {
   const fields = []
@@ -139,6 +139,7 @@ function rowToEventRow(row: string): NotifyRow {
       fields.push(whole)
     } else {
       let converted = fromPostgresString(quoted)
+      // Postgres quoted string %L with escaped characters, starts with E.
       if (whole.startsWith("E")) {
         converted = converted.replaceAll("\\\\", "\\")
       }
@@ -163,7 +164,7 @@ function rowToEventRow(row: string): NotifyRow {
       checksum:   Long.fromString(chkStr, true).toInt()
     },
     event,
-    entities: maybeParseJson(entitiesStr) as Record<string, string[]>,
+    entities: maybeParseJson(entitiesStr),
     meta:     maybeParseJson(metaStr),
     data:     maybeParseJson(dataStr)
   }
