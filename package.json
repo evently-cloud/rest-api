@@ -14,7 +14,7 @@
     "debug": "tsx --env-file ./env/evently.env src/index.ts",
     "start": "node --trace-warnings --env-file ./env/evently.env dist/src/index.js",
     "profile": "node --env-file ./env/evently.env --trace_gc dist/index.js",
-    "trace-events": "tsx --env-file ./env/evently.env --trace-event-categories v8,node,node.async_hooks dist/index.js"
+    "trace-events": "tsx --env-file ./env/evently.env --trace-event-categories v8,node,node.async_hooks dist/src/index.js"
   },
   "devDependencies": {
     "@types/http-errors": "2.0.5",

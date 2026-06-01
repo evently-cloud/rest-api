@@ -36,7 +36,7 @@ type ChannelsMap = Map<string, Channel>
 
 
 function createKey({id}: Ledger, channelId: string): string {
-  return `${id}|${channelId}`
+  return `${id}»${channelId}`
 }
 
 

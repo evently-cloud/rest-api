@@ -143,9 +143,8 @@ async function tryAppendResult(logger:          P.Logger,
       }
     }
   } catch (err) {
-    // https://www.enterprisedb.com/edb-docs/d/postgresql/reference/manual/12.3/errcodes-appendix.html
     if (err instanceof PG.PostgresError) {
-      if (err.message.startsWith("RACE CONDITION")) {
+      if (err.code === "ERACE") {
         const raceResult = {
           status: Result.RACE,
           error:  "Race Condition! Entity has newer events. Please GET /SELECTOR for the most recent events."
@@ -160,28 +159,16 @@ async function tryAppendResult(logger:          P.Logger,
           message: "idempotencyKey reused for a different event. Please generate a new idempotencyKey and repeat the append request."
         })
       }
-      if (err.message === "previous can only be genesis for first event") {
+      if (err.code === "EAFNF") {
         return {
           status: Result.ERROR,
-          message: "Ledger already has events, must send most recent selector event id as 'after' in append body."
-        }
-      }
-      if (err.message === "previous_id must exist in the ledger") {
-        return {
-          status: Result.ERROR,
-          message: `Previous Event ID is not found in ledger.`
-        }
-      }
-      if (err.message.startsWith("AFTER not found")) {
-        return {
-          status: Result.ERROR,
-          message: `'after' value not found in ledger.`
+          message: "'after' value not found in ledger."
         }
       }
     }
 
     const refNum = `ref#${createId()}`
-    logger.error(err as Error, `unhandled store error, ${refNum}`)
+    logger.error(err as Error, `unhandled append error, ${refNum}`)
     const httpMessage = `Something went wrong on our side. Please contact us with ${refNum} for investigation.`
     throw createHttpError.InternalServerError(httpMessage)
   }
