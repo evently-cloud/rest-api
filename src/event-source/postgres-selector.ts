@@ -143,7 +143,8 @@ async function continueSelector(logger:         P.Logger,
                                 firstBatch:     EventRow[]): Promise<SelectorResult> {
   const {ledgerId} = position
   const rowToEvent = (row: EventRow) => eventRowToPersistedEvent(ledgerId, row)
-  const allEventsPresent = firstBatch.length < EVENT_BATCH_SIZE
+  const limitReached = limit > 0 && firstBatch.length >= limit
+  const allEventsPresent = limitReached || firstBatch.length < EVENT_BATCH_SIZE
 
   let events
   if (allEventsPresent) {
@@ -155,11 +156,12 @@ async function continueSelector(logger:         P.Logger,
       timestamp,
       checksum: checksum.toUnsigned().toInt()
     }
+    const remainingLimit = limit === 0 ? 0 : Math.max(limit - firstBatch.length, 0)
     /*
       A problem with this approach is that AsyncGenerator does not buffer or read ahead. I want a push stream
       to fetch more rows while the previous ones are being sent to the client.
      */
-    events = streamPersistedEvents(sql, startPosition, limit, selectorBytes, firstBatch, rowToEvent)
+    events = streamPersistedEvents(sql, startPosition, remainingLimit, selectorBytes, firstBatch, rowToEvent)
   }
 
   const eventStream = Readable.from(events)
