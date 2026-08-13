@@ -1,4 +1,4 @@
-import fastify, { FastifyInstance } from "fastify"
+import fastify, { FastifyInstance, LogController } from "fastify"
 import fastifyCompress from "@fastify/compress"
 import fastifyCors from "@fastify/cors"
 import { FastifyAllowPlugin } from "fastify-allow"
@@ -40,13 +40,13 @@ export function launch(shutdown:  ShutdownHookRegistrar,
 
   const server = fastify({
     loggerInstance:         logger,
-    disableRequestLogging:  true,
+    logController:          new LogController({disableRequestLogging: true}),
     exposeHeadRoutes:       true,
     trustProxy:             true,
     routerOptions: {
-      caseSensitive:          false,
-      ignoreTrailingSlash:    true,
-      maxParamLength:         2048  // default is 100
+      caseSensitive:        false,
+      ignoreTrailingSlash:  true,
+      maxParamLength:       2048  // default is 100
     }
   }) as unknown as FastifyInstance  // fastify type def is horrendous
 
