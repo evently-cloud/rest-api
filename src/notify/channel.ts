@@ -4,7 +4,7 @@ import createHttpError from "http-errors"
 import { IterableWeakSet } from "weakref"
 
 import { PersistedEvent } from "../api/type/persisted-event.ts"
-import { asyncify, MessagePush, ListenerProvider } from "../asyncify.ts"
+import { asyncify, MessagePush } from "../asyncify.ts"
 import { encodeUnknownSelector } from "../selector-utils.ts"
 import { Selector } from "../types.ts"
 import { Channel, EventListener, EventListenerRegistrar, SelectorsNotification } from "./notify.ts"
@@ -43,15 +43,16 @@ export function createChannel(registrar: EventListenerRegistrar, id: string): Ch
   }
 }
 
-function findFilter(filters: Map<string, SubscriptionFilter>, subscriptionId: string): [string, SubscriptionFilter] | undefined {
+function findFilter(filters: Map<string, SubscriptionFilter>, subscriptionId: string): { key: string, selector: Selector } | undefined {
   for (const [key, filter] of filters) {
-    if (filter.id === subscriptionId) {
-      return [key, filter]
+    const {id, selector} = filter
+    if (id === subscriptionId) {
+      return {key, selector}
     }
   }
 }
 
-async function handleClose(sseConnections: IterableWeakSet<SSEStream>){
+async function handleClose(sseConnections: Iterable<SSEStream>){
   const closers: Promise<unknown>[] = []
   for (const sse of sseConnections) {
     // sse listener unregisters itself onClose
@@ -87,7 +88,7 @@ function handleSubscribe(filters: FilterMap, selectorIn: Selector) {
 function handleUnsubscribe(filters: FilterMap, subscriptionId: string) {
   const filter = findFilter(filters, subscriptionId)
   if (filter) {
-    filters.delete(filter[0])
+    filters.delete(filter.key)
   }
 }
 
@@ -100,7 +101,7 @@ function getSubscriptions(filters: FilterMap) {
 function getSubscription(filters: FilterMap, subscriptionId: string) {
   const filter = findFilter(filters, subscriptionId)
   if (filter) {
-    return filter[1].selector
+    return filter.selector
   }
 }
 
@@ -140,7 +141,7 @@ function openEventStream(registrar:   EventListenerRegistrar,
   }
 
   const notificationToSse = createNotifySelectorFilter(filters)
-  const listenToNotify: ListenerProvider<EventMessage, EventListener> = async (push: MessagePush<EventMessage>) => {
+  const listenToNotify = async (push: MessagePush<EventMessage>) => {
     const listener: EventListener = (e) => {
       const eventMessage = notificationToSse(e)
       if (eventMessage) {
@@ -156,6 +157,7 @@ function openEventStream(registrar:   EventListenerRegistrar,
       registrar.removeEventListener(listener)
     }
   })
+
   sseStreams.add(stream)
   return stream
 }
@@ -182,7 +184,7 @@ function createNotifySelectorFilter(filters: FilterMap): PersistedToEventMessage
 
 function createEvent({position: id, subscriptionIds}: SelectorsNotification): EventMessage {
   /*
-  Currently, data is just a comma-separated list of subscription IDs that matched the new event.
+  Data is just a comma-separated list of subscription IDs that matched the new event.
   The client needs to take that ID and turn it into a selector query. Before, they would take the ID and
   post it to /selectors/ with their after and limit.
 

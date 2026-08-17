@@ -45,7 +45,7 @@
     "pino": "10.3.1",
     "postgres": "3.4.9",
     "specified": "1.0.2",
-    "sql-jsonpath-js": "2.0.0",
+    "sql-jsonpath-js": "2.0.1",
     "toad-cache": "3.7.4",
     "weakref": "0.2.5"
   }

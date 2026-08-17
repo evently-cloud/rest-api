@@ -4,12 +4,12 @@
  *   https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/callback-to-async-iterator
  * License: MIT
  *
- * The project is archived, and the type definitions do not work in an ESM, so it is unusable as-is in
+ * The project is archived, and the type definitions do not work in ESM, so it is unusable as-is in
  * this project.
  */
 
-export interface AsyncifyOptions<MESSAGE, LISTENER> {
-  onClose?: (listener: LISTENER) => void | MESSAGE
+export interface AsyncifyOptions<LISTENER> {
+  onClose?: (listener: LISTENER) => void
   onError?: (err: Error) => Error
   buffering?: boolean
 }
@@ -27,7 +27,7 @@ const defaultOnError = (err: Error) => {
 }
 
 export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, LISTENER>,
-                                            options?: AsyncifyOptions<MESSAGE, LISTENER>): AsyncIterableIterator<MESSAGE> {
+                                            options?: AsyncifyOptions<LISTENER>): AsyncIterableIterator<MESSAGE> {
   const { onError = defaultOnError, buffering = true, onClose } = options ?? {}
   try {
     let pullQueue: IteratorResultConsumer<MESSAGE>[] = []
@@ -55,7 +55,7 @@ export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, 
     function pullValue(): Promise<IteratorResult<MESSAGE>> {
       return new Promise(resolve => {
         const value = pushQueue.shift()
-        if (value !== undefined) {
+        if (value) {
           resolve({ value, done: false })
         } else {
           pullQueue.push(resolve)
