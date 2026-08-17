@@ -34,7 +34,7 @@
     "close-with-grace": "2.5.0",
     "fast-json-stringify": "7.0.1",
     "fast-rbac": "2.0.1",
-    "fastify": "5.11.3",
+    "fastify": "5.12.0",
     "fastify-allow": "2.1.1",
     "fastify-https-always": "2.0.0",
     "fastify-plugin": "6.0.0",
@@ -45,7 +45,7 @@
     "pino": "10.3.1",
     "postgres": "3.4.9",
     "specified": "1.0.2",
-    "sql-jsonpath-js": "1.0.1",
+    "sql-jsonpath-js": "2.0.0",
     "toad-cache": "3.7.4",
     "weakref": "0.2.5"
   }

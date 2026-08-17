@@ -74,8 +74,7 @@ function createJsonpathMatcher({query, vars}: JsonpathFilter): Exists {
     return createAllMatcher()
   }
   const matcher = sjp.compile(query)
-  const variables = vars && {variables: vars}
-  return (input) => matcher.exists(input, variables) as boolean
+  return (input) => matcher.exists(input, {vars}) as boolean
 }
 
 function createMetaMatcher(filter: JsonpathFilter): SelectorMatcher {
