@@ -44,6 +44,9 @@ export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, 
       })
 
     function pushValue(value: MESSAGE) {
+      if (!listening) {
+        return
+      }
       const resolve = pullQueue.shift()
       if (resolve) {
         resolve({ value, done: false })
@@ -54,10 +57,10 @@ export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, 
 
     function pullValue(): Promise<IteratorResult<MESSAGE>> {
       return new Promise(resolve => {
-        const value = pushQueue.shift()
-        if (value) {
-          resolve({ value, done: false })
-        } else {
+        if (pushQueue.length) {
+          resolve({ value: pushQueue.shift() as MESSAGE, done: false })
+        }
+        else {
           pullQueue.push(resolve)
         }
       })
