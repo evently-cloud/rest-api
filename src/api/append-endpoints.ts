@@ -57,7 +57,7 @@ function initHandleGetSchema(schema:  object,
 
   return (request:  FastifyRequest,
           reply:    FastifyReply) => {
-    reply
+    return reply
       .type(CONTENT_TYPES.JSON_SCHEMA)
       .header(HEADERS.PROFILE, L3_PROFILES.FORM)
       .send(formattedSchemaResponse)

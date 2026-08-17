@@ -128,7 +128,7 @@ const getRegistryResponse: HALObject = {
 
 function handleGetRegistry(request:  FastifyRequest,
                            reply:    FastifyReply) {
-  reply
+  return reply
     .type(CONTENT_TYPES.HAL)
     .header(HEADERS.PROFILE, L3_PROFILES.HOME)
     .send(formattedJSON(getRegistryResponse))
@@ -142,7 +142,7 @@ const getNewEventTypeFormSchema = {
 
 function handleGetNewEventTypeForm(request: FastifyRequest,
                                    reply:   FastifyReply) {
-  reply
+  return reply
     .type(CONTENT_TYPES.JSON_SCHEMA)
     .headers({
         [HEADERS.PROFILE]: [
@@ -178,12 +178,6 @@ function initHandleGetEntities(registry: Registry) {
   return async (request:  FastifyRequest,
                 reply:    FastifyReply) => {
     const ledger = getLedgerFromRequestCtx(request)
-    reply
-      .type(CONTENT_TYPES.HAL)
-      .header(HEADERS.PROFILE, [
-        L3_PROFILES.INFO,
-        L3_PATTERNS.LIST_RESOURCE
-      ])
 
     const entities = await registry.entities(ledger)
 
@@ -203,7 +197,13 @@ function initHandleGetEntities(registry: Registry) {
         }
       }
     }
-    return reply.send(formattedJSON(response))
+    return reply
+      .type(CONTENT_TYPES.HAL)
+      .header(HEADERS.PROFILE, [
+        L3_PROFILES.INFO,
+        L3_PATTERNS.LIST_RESOURCE
+      ])
+      .send(formattedJSON(response))
   }
 }
 
@@ -218,14 +218,6 @@ function initGetEntity(registry: Registry) {
     if (events.length === 0) {
       throw createHttpError.NotFound(`entity '${entity}' does not exist.`)
     }
-
-    reply
-      .type(CONTENT_TYPES.HAL)
-      .header(HEADERS.PROFILE, [
-        L3_PROFILES.INFO,
-        L3_PATTERNS.LIST_RESOURCE,
-        L3_PATTERNS.ENTRY_RESOURCE
-      ])
 
     const eventLinks: LinkObject[] = events.map(({event}) => ({
       name:     event,
@@ -250,7 +242,14 @@ function initGetEntity(registry: Registry) {
       }
     }
 
-    return reply.send(formattedJSON(response))
+    return reply
+      .type(CONTENT_TYPES.HAL)
+      .header(HEADERS.PROFILE, [
+        L3_PROFILES.INFO,
+        L3_PATTERNS.LIST_RESOURCE,
+        L3_PATTERNS.ENTRY_RESOURCE
+      ])
+      .send(formattedJSON(response))
   }
 }
 
@@ -261,13 +260,6 @@ function initHandleGetEvents(registry: Registry) {
     const ledger = getLedgerFromRequestCtx(request)
 
     const events = await registry.allEvents(ledger)
-
-    reply
-      .type(CONTENT_TYPES.HAL)
-      .header(HEADERS.PROFILE, [
-        L3_PROFILES.INFO,
-        L3_PATTERNS.LIST_RESOURCE
-      ])
 
     const eventLinks: LinkObject[] = events.map(({event}) => ({
       name:     event,
@@ -286,7 +278,13 @@ function initHandleGetEvents(registry: Registry) {
       }
     }
 
-    return reply.send(formattedJSON(response))
+    return reply
+      .type(CONTENT_TYPES.HAL)
+      .header(HEADERS.PROFILE, [
+        L3_PROFILES.INFO,
+        L3_PATTERNS.LIST_RESOURCE
+      ])
+      .send(formattedJSON(response))
   }
 }
 

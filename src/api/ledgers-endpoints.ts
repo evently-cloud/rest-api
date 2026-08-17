@@ -166,13 +166,6 @@ export function initLedgersEndpoints(server:  FastifyInstance,
 function initHandleGetLedgers(ledgers: Ledgers) {
   return async (request:  FastifyRequest,
                 reply:    FastifyReply) => {
-    reply
-      .type(CONTENT_TYPES.HAL)
-      .header(HEADERS.PROFILE, [
-        L3_PROFILES.HOME,
-        L3_PATTERNS.LIST_RESOURCE
-      ])
-
     const ledgerList = await ledgers.allLedgers()
     const ledgerLinks: LinkObject[] = ledgerList.map(({id, name}) => ({
       name,
@@ -190,7 +183,13 @@ function initHandleGetLedgers(ledgers: Ledgers) {
         }
       }
     }
-    return reply.send(formattedJSON(response))
+    return reply
+      .type(CONTENT_TYPES.HAL)
+      .header(HEADERS.PROFILE, [
+        L3_PROFILES.HOME,
+        L3_PATTERNS.LIST_RESOURCE
+      ])
+      .send(formattedJSON(response))
   }
 }
 
@@ -203,9 +202,9 @@ const createLedgerSchema = formattedJSON({
 function handleGetCreateLedger(request:  FastifyRequest,
                                reply:    FastifyReply) {
   return reply
-      .type(CONTENT_TYPES.JSON_SCHEMA)
-      .header(HEADERS.PROFILE, L3_PROFILES.FORM)
-      .send(createLedgerSchema)
+    .type(CONTENT_TYPES.JSON_SCHEMA)
+    .header(HEADERS.PROFILE, L3_PROFILES.FORM)
+    .send(createLedgerSchema)
 }
 
 
@@ -266,8 +265,7 @@ function initHandleDeleteLedger(ledgers: Ledgers) {
     const ledger = await ledgerFromPath(ledgers, request)
     await ledgers.removeLedger(ledger)
 
-    return reply
-      .send(`Removed ledger '${ledger.name}' with id '${ledger.id}'`)
+    return `Removed ledger '${ledger.name}' with id '${ledger.id}'`
   }
 }
 

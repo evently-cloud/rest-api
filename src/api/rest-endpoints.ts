@@ -81,7 +81,7 @@ const formattedRoot = formattedJSON(getRootResponse)
 
 function handleGetRoot(request: FastifyRequest,
                        reply:   FastifyReply) {
-  reply
+  return reply
     .type(CONTENT_TYPES.HAL)
     .header(HEADERS.PROFILE, L3_PROFILES.HOME)
     .send(formattedRoot)

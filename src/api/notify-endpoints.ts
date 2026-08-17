@@ -175,7 +175,7 @@ const formattedNotifyResponse = formattedJSON(getNotifyResponse)
 function handleGetNotify(request: FastifyRequest,
                          reply:   FastifyReply) {
   // CONSIDER: Admin clients see the list of channels
-  reply
+  return reply
     .type(CONTENT_TYPES.HAL)
     .header(HEADERS.PROFILE, L3_PROFILES.HOME)
     .send(formattedNotifyResponse)
@@ -197,7 +197,7 @@ const formattedOpenChannelResponse = formattedJSON(openChannelResponse)
 
 function handleGetOpenChannel(request: FastifyRequest,
                               reply:   FastifyReply) {
-  reply
+  return reply
     .type(CONTENT_TYPES.HAL)
     .header(HEADERS.PROFILE, L3_PROFILES.ACTION)
     .send(formattedOpenChannelResponse)
@@ -242,7 +242,7 @@ function initHandleGetChannel(channels: Channels) {
         }
       }
     }
-    reply
+    return reply
       .type(CONTENT_TYPES.HAL)
       .header(HEADERS.PROFILE, L3_PROFILES.NEXUS)
       .send(formattedJSON(getChannelResponse))
@@ -265,9 +265,9 @@ function initHandleDeleteChannel(channels: Channels) {
 
 
 function initHandleGetChannelSSE(channels: Channels) {
-  return async (request:  FastifyRequest<{Headers:  ChannelSSEHeaders,
-                                          Params:   ChannelPathParameters}>,
-                reply:    FastifyReply) => {
+  return (request:  FastifyRequest<{Headers:  ChannelSSEHeaders,
+                                    Params:   ChannelPathParameters}>,
+          reply:    FastifyReply) => {
     const {
       headers,
       params: {
@@ -279,6 +279,7 @@ function initHandleGetChannelSSE(channels: Channels) {
     const ledger = getLedgerFromRequestCtx(request)
     const eventStream = channels.openEventStream(ledger, channelId, lastEventId)
     reply.sse(eventStream)
+    // do not return reply
   }
 }
 
@@ -294,7 +295,7 @@ function initHandleGetSubscribe(channels: Channels) {
     }
     const formattedGetSubscribeResponse = formattedJSON(getSubscribeResponse)
     const subscriptionsUri = PATHS.SUBSCRIPTIONS.replace(CHANNEL_ID, channelId)
-    reply
+    return reply
       .type(CONTENT_TYPES.JSON_SCHEMA)
       .headers({
         [HEADERS.PROFILE]: [
@@ -309,9 +310,9 @@ function initHandleGetSubscribe(channels: Channels) {
 
 
 function initHandlePostSubscribe(channels: Channels) {
-  return async (request:  FastifyRequest<{Params: ChannelPathParameters,
-                                          Body:   SelectorSubscriptionForm}>,
-                reply:    FastifyReply) => {
+  return (request:  FastifyRequest<{Params: ChannelPathParameters,
+                                    Body:   SelectorSubscriptionForm}>,
+          reply:    FastifyReply) => {
     const {
       params: {
         channelId
@@ -335,8 +336,8 @@ function initHandlePostSubscribe(channels: Channels) {
 }
 
 function initHandleGetSubscriptions(channels: Channels) {
-  return async (request:  FastifyRequest<{Params: ChannelPathParameters}>,
-                reply:    FastifyReply) => {
+  return (request:  FastifyRequest<{Params: ChannelPathParameters}>,
+          reply:    FastifyReply) => {
     const {
       params: {
         channelId
@@ -367,7 +368,7 @@ function initHandleGetSubscriptions(channels: Channels) {
         }
       }
     }
-    reply
+    return reply
       .type(CONTENT_TYPES.HAL)
       .header(HEADERS.PROFILE, [
         L3_PROFILES.INFO,
@@ -379,8 +380,8 @@ function initHandleGetSubscriptions(channels: Channels) {
 
 
 function initHandleGetSubscription(channels: Channels) {
-  return async (request:  FastifyRequest<{Params: ChannelSubscriptionPathParameters}>,
-                reply:    FastifyReply) => {
+  return (request:  FastifyRequest<{Params: ChannelSubscriptionPathParameters}>,
+          reply:    FastifyReply) => {
     const {
       params: {
         channelId,
@@ -408,7 +409,7 @@ function initHandleGetSubscription(channels: Channels) {
         }
       }
     }
-    reply
+    return reply
       .type(CONTENT_TYPES.HAL)
       .header(HEADERS.PROFILE, [
         L3_PROFILES.DATA,
@@ -419,8 +420,8 @@ function initHandleGetSubscription(channels: Channels) {
 }
 
 function initHandleDeleteSubscription(channels: Channels) {
-  return async (request: FastifyRequest<{Params: ChannelSubscriptionPathParameters}>,
-                reply: FastifyReply) => {
+  return (request: FastifyRequest<{Params: ChannelSubscriptionPathParameters}>,
+          reply: FastifyReply) => {
     const {
       params: {
         channelId,
