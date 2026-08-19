@@ -9,7 +9,7 @@
  */
 
 export interface AsyncifyOptions<LISTENER> {
-  onClose?: (listener: LISTENER) => void
+  onClose?: (listener: LISTENER, value?: any) => void
   onError?: (err: Error) => Error
   buffering?: boolean
 }
@@ -66,13 +66,13 @@ export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, 
       })
     }
 
-    function emptyQueue() {
+    function emptyQueue(value?: any) {
       if (listening) {
         listening = false
         pullQueue.forEach(resolve => resolve({ value: undefined, done: true }))
         pullQueue = []
         pushQueue = []
-        onClose && onClose(listener)
+        onClose && onClose(listener, value)
       }
     }
 
@@ -82,7 +82,7 @@ export function asyncify<MESSAGE, LISTENER>(provider: ListenerProvider<MESSAGE, 
         return listening ? pullValue() : asyncIterable.return()
       },
       return(value?: any) {
-        emptyQueue()
+        emptyQueue(value)
         return Promise.resolve({ value, done: true })
       },
       throw(error?: any) {

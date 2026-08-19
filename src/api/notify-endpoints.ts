@@ -3,7 +3,7 @@ import createHttpError from "http-errors"
 
 import { maybeFromEventIdString } from "../eventId-utils.ts"
 import { Channels } from "../notify/notify.ts"
-import { isFilterSelector } from "../selector-utils.ts"
+import { isFilterSelector, isPlainSelector } from "../selector-utils.ts"
 import { formattedJSON, getLedgerFromRequestCtx, linkProfile } from "./api-utils.ts"
 import { authHeadersSchema, Authorization, Permission } from "./auth/index.ts"
 import { CONTENT_TYPES, HEADERS, L3_PATTERNS, L3_PROFILES, L3_RELS } from "./constants.ts"
@@ -278,8 +278,12 @@ function initHandleGetChannelSSE(channels: Channels) {
     const lastEventId = headers[HEADERS.LAST_EVENT_ID]
     const ledger = getLedgerFromRequestCtx(request)
     const eventStream = channels.openEventStream(ledger, channelId, lastEventId)
-    reply.sse(eventStream)
-    // do not return reply
+    // I filed an issue about this:
+    // https://github.com/mpetrunic/fastify-sse-v2/issues/112
+    reply.raw.on("close", () => {
+      eventStream.return?.("disconnected")
+    })
+    return reply.sse(eventStream)
   }
 }
 
@@ -323,6 +327,9 @@ function initHandlePostSubscribe(channels: Channels) {
     const selector = {
       ...subForm,
       after: maybeFromEventIdString(subForm.after)
+    }
+    if (isPlainSelector(selector)) {
+      throw createHttpError.BadRequest("Selector missing filtering items, like entities, meta and data filters.")
     }
     const subscriptionId = channels.subscribe(ledger, channelId, selector)
     const subscriptionUri = PATHS.SUBSCRIPTION

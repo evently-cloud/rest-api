@@ -7,7 +7,8 @@ import { fromPostgresString } from "../db/selector-sql.ts"
 import { eventIdToString } from "../eventId-utils.ts"
 import { EventListener, EventListenerRegistrar } from "./notify.ts"
 import { PersistedEvent } from "../api/type/persisted-event.ts"
-import { EventID, ShutdownHookRegistrar, UnknownObject } from "../types.ts"
+import { EventID, ShutdownHookRegistrar, SSE_RETRY, UnknownObject } from "../types.ts"
+import { ResettableTimer } from "./resettable-timer.ts"
 
 
 export async function init(shutdown:  ShutdownHookRegistrar,
@@ -16,26 +17,40 @@ export async function init(shutdown:  ShutdownHookRegistrar,
   logger.info("init Postgres Event Notifier")
   const listeners: EventListener[] = []
 
+  function clearEventListeners(listeners: EventListener[]) {
+    if (listeners.length === 1) {
+      listeners.pop()
+    }
+  }
+
+  const lastRemove: ResettableTimer<[EventListener[]]> = new ResettableTimer(clearEventListeners, SSE_RETRY * 4000, listeners)
+  lastRemove.cancel()
+
   // will re-attach listener if DB goes down and then comes back up
   const listener = await sql.listen("ALL_EVENTS", (r) => handleEventNotify(logger, sql, listeners, r))
   shutdown("Postgres Event Listener", listener.unlisten)
 
   return {
-    addEventListener: (l) => addEventListener(listeners, l),
-    removeEventListener: (l) => removeEventListener(listeners, l)
+    addEventListener: (l) => addEventListener(listeners, lastRemove, l),
+    removeEventListener: (l, d) => removeEventListener(listeners, lastRemove, l, d)
   }
 }
 
 
-async function addEventListener(listeners: EventListener[], listener: EventListener) {
+function addEventListener(listeners: EventListener[], timeout: ResettableTimer<any>, listener: EventListener) {
   listeners.push(listener)
+  timeout.cancel()
 }
 
 
-function removeEventListener(listeners: EventListener[], listener: EventListener) {
+function removeEventListener(listeners: EventListener[], timeout: ResettableTimer<any>, listener: EventListener, disconnect: boolean) {
   const pos = listeners.indexOf(listener)
   if (pos > -1) {
-    listeners.splice(pos, 1)
+    if (disconnect && listeners.length === 1) {
+      timeout.start()
+    } else {
+      listeners.splice(pos, 1)
+    }
   }
 }
 

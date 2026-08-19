@@ -3,6 +3,9 @@ import Long from "long"
 
 export const LEDGER = "📒"
 
+/** How long the client should wait before retrying their SSE listener connection. */
+export const SSE_RETRY = 5_000
+
 export type ShutdownHookRegistrar = (name: string, shutdownFn: () => any) => void
 
 export type Ledger = {
@@ -18,9 +21,9 @@ export type Selector = {
 }
 
 export type FilterSelector = Selector & {
-  entities?: EntitiesRecord
-  meta?: JsonpathFilter
-  events?: DataFilter
+  entities?:  EntitiesRecord
+  meta?:      JsonpathFilter
+  events?:    DataFilter
 }
 
 export type EventID = {

@@ -13,7 +13,7 @@ import { EventStore } from "../event-store/index.ts"
 import { Ledgers } from "../ledgers/index.ts"
 import { Channels } from "../notify/notify.ts"
 import { Registry } from "../registry/index.ts"
-import { Ledger, ShutdownHookRegistrar } from "../types.ts"
+import { Ledger, ShutdownHookRegistrar, SSE_RETRY } from "../types.ts"
 import { initAuth, Role } from "./auth/index.ts"
 import { HEADERS } from "./constants.ts"
 import { initRestEndpoints } from "./rest-endpoints.ts"
@@ -66,6 +66,7 @@ export function launch(shutdown:  ShutdownHookRegistrar,
     allowedHeaders: [
       HEADERS.AUTHORIZATION,
       HEADERS.CONTENT_TYPE,  // added to allow any content type (like application/json), not just the safe list
+      HEADERS.LAST_EVENT_ID,
       HEADERS.PREFER
     ],
 /*
@@ -103,7 +104,7 @@ export function launch(shutdown:  ShutdownHookRegistrar,
 
   server.register(fastifyCompress, compressOptions)
 
-  server.register(FastifySSEPlugin)
+  server.register(FastifySSEPlugin, { retryDelay: SSE_RETRY })
 
   server.register(FastifyAllowPlugin)
 

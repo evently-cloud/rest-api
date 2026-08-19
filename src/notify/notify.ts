@@ -5,8 +5,8 @@ import { Ledger, Selector } from "../types.ts"
 
 
 export interface EventListenerRegistrar {
-  addEventListener(listener: EventListener): Promise<void>
-  removeEventListener(listener: EventListener): void
+  addEventListener(listener: EventListener): void
+  removeEventListener(listener: EventListener, disconnect: boolean): void
 }
 
 
@@ -38,7 +38,7 @@ export interface Channel {
 
   subscription(subscriptionId: string): Selector | undefined
 
-  openEventStream(lastEventId?: string): AsyncIterable<EventMessage>
+  openEventStream(lastEventId?: string): AsyncIterableIterator<EventMessage>
 
   close(): Promise<void>
 }
@@ -61,7 +61,7 @@ export interface Channels {
 
   subscription(ledger: Ledger, channelId: string, subscriptionId: string): Selector | undefined
 
-  openEventStream(ledger: Ledger, channelId: string, lastEventId?: string): AsyncIterable<EventMessage>
+  openEventStream(ledger: Ledger, channelId: string, lastEventId?: string): AsyncIterableIterator<EventMessage>
 
   close(ledger: Ledger, channelId: string): Promise<void>
 }

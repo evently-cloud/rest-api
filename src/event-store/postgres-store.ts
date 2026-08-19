@@ -6,7 +6,7 @@ import PG, { Sql } from "postgres"
 
 import { PATHS as REG_PATHS } from "../api/registry-endpoints.ts"
 import { unknownSelectorToSql } from "../db/selector-sql.ts"
-import { toEventIdString } from "../eventId-utils.ts"
+import { maybeFromEventIdString, toEventIdString } from "../eventId-utils.ts"
 import { stringToBytes } from "../hex-utils.ts"
 import { Registry } from "../registry/index.ts"
 import { areEqual } from "../selector-utils.ts"
@@ -134,7 +134,8 @@ async function tryAppendResult(logger:          P.Logger,
   ${appendKey}::TEXT,
   ${selector}::BYTEA
 ) AS event_id`
-
+    const eventTs = maybeFromEventIdString(eventId)
+    logger.info(`appended event, ts: ${eventTs?.timestamp.toString()}`)
     return {
       status: Result.SUCCESS,
       ok: {

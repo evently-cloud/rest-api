@@ -80,7 +80,7 @@ async function handleCloseChannel(channels:   ChannelsMap,
 function handleOpenEventStream(channels:      ChannelsMap,
                                ledger:        Ledger,
                                channelId:     string,
-                               lastEventId?:  string): AsyncIterable<EventMessage> {
+                               lastEventId?:  string): AsyncIterableIterator<EventMessage> {
   const channel = getChannel(channels, ledger, channelId)
   return channel.openEventStream(lastEventId)
 }

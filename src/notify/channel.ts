@@ -1,29 +1,27 @@
 import {createId} from "@paralleldrive/cuid2"
 import { EventMessage } from "fastify-sse-v2"
-import createHttpError from "http-errors"
 import { IterableWeakSet } from "weakref"
 
 import { PersistedEvent } from "../api/type/persisted-event.ts"
 import { asyncify, MessagePush } from "../asyncify.ts"
-import { encodeUnknownSelector } from "../selector-utils.ts"
-import { Selector } from "../types.ts"
+import { eventIdToString, maybeFromEventIdString } from "../eventId-utils.ts"
+import { encodeFilterSelector } from "../selector-utils.ts"
+import { EventID, Selector } from "../types.ts"
 import { Channel, EventListener, EventListenerRegistrar, SelectorsNotification } from "./notify.ts"
 import { createMatcher, SelectorMatcher } from "./selector-matcher.ts"
 
 
 type SubscriptionFilter = {
-  id:       string
-  selector: Selector
-  matcher:  SelectorMatcher
+  id:           string
+  selector:     Selector
+  matcher:      SelectorMatcher
+  lastEventId?: EventID
 }
 
 // key is compressed encoded selector, so we can handle idempotent subscriptions
 type FilterMap = Map<string, SubscriptionFilter>
 type SSEStream = AsyncIterableIterator<EventMessage>
 type PersistedToEventMessage = (event: PersistedEvent) => EventMessage | undefined
-
-
-const SSE_RETRY = 10_000 // 10 seconds
 
 
 export function createChannel(registrar: EventListenerRegistrar, id: string): Channel {
@@ -63,12 +61,13 @@ async function handleClose(sseConnections: Iterable<SSEStream>){
 
 
 function handleSubscribe(filters: FilterMap, selectorIn: Selector) {
-  // drop limit
+  // drop 'limit', retain 'after' for lastEventId
   const {
     limit,
+    after: lastEventId,
     ...selector
   } = selectorIn
-  const key = encodeUnknownSelector(selector)
+  const key = encodeFilterSelector(selector)
   // idempotency, don't add same filter more than once
   let id = filters.get(key)?.id
   if (id === undefined) {
@@ -77,7 +76,8 @@ function handleSubscribe(filters: FilterMap, selectorIn: Selector) {
     const filter = {
       id,
       selector,
-      matcher
+      matcher,
+      lastEventId
     }
     filters.set(key, filter)
   }
@@ -106,39 +106,10 @@ function getSubscription(filters: FilterMap, subscriptionId: string) {
 }
 
 
-function openEventStream(registrar:   EventListenerRegistrar,
-                         filters:     FilterMap,
-                         sseStreams:  WeakSet<SSEStream>,
-                         after?:      string): AsyncIterableIterator<EventMessage> {
-  if (after) {
-    /*
-        catch up the listener? This will be async, so it might miss events that happen while catchup is occurring.
-        also, how will it know which selector to execute?
-        when the listener is fired, the lastEventId updates internally.
-        If there's a miss, It can replay again.
-
-        This sounds pretty complicated. The listener should manage this, right?
-        It would have an eventSource reference to look up the missed things.
-
-        However, you're only looking for missed matches. If the new event matches the selector, who cares what was missed?
-        You only need to look if the event does NOT match.
-        In a fast-moving system, this will need a speed cache of recent events, so I can run the selector against that list
-        instead of going to the db. Nathan Marz's speed layer approach.
-
-        Actually, I can run the listener BACKWARDS. I only care about the most recent hit, not all the events.
-        This is easier with in-memory queue, but will need an adjustment to the event selector function in PG.
-
-        Need a timer on connection close to wait to unsubscribe all the selectors.
-        Maybe that's the approach? Not an event cache, but a notification cache. It sticks around after the connection
-        drops and keeps pumping matches into it; when reconnect occurs, we can just ignore the last-event-id
-        and just send the current notification set.
-
-        asyncify needs to be a bit different, more of a set?
-        new push notification comes in; it looks through the pull list for matches. If matched, that means the notification
-        has not been consumed, so it just drops the new notification.
-      */
-    throw createHttpError.BadRequest("can't use Last-Event-Id header yet")
-  }
+function openEventStream(registrar:     EventListenerRegistrar,
+                         filters:       FilterMap,
+                         sseStreams:    WeakSet<SSEStream>,
+                         afterHeader?:  string): AsyncIterableIterator<EventMessage> {
 
   const notificationToSse = createNotifySelectorFilter(filters)
   const listenToNotify = async (push: MessagePush<EventMessage>) => {
@@ -148,17 +119,46 @@ function openEventStream(registrar:   EventListenerRegistrar,
         push(eventMessage)
       }
     }
-    await registrar.addEventListener(listener)
+    registrar.addEventListener(listener)
     return listener
   }
 
+  // consider switching to https://github.com/rolftimmermans/event-iterator
   const stream = asyncify(listenToNotify, {
-    onClose: (listener) => {
-      registrar.removeEventListener(listener)
+    onClose: (listener, value) => {
+      registrar.removeEventListener(listener, "disconnected" === value)
     }
   })
 
   sseStreams.add(stream)
+
+  // Did the client send Last-Event-Id header? If so, maybe send a notification message so they can catch up.
+  if (afterHeader) {
+    const afterId = maybeFromEventIdString(afterHeader)
+    let id = afterId as EventID
+    const {timestamp: afterTs} = id
+    const subscriptionIds = filters.values()
+      .filter((f) => {
+        const {lastEventId} = f
+        if (lastEventId?.timestamp.greaterThan(afterTs)) {
+          // capture the most recent event id
+          if (lastEventId.timestamp.greaterThan(id.timestamp)) {
+            id = lastEventId
+          }
+          return true
+        }
+      })
+      .map((f) => f.id)
+      .toArray()
+    if (subscriptionIds.length) {
+      const event = createEvent({
+        subscriptionIds,
+        position: eventIdToString(id)
+      })
+      stream.next(event)
+    }
+  }
+
   return stream
 }
 
@@ -168,6 +168,7 @@ function createNotifySelectorFilter(filters: FilterMap): PersistedToEventMessage
     const subscriptionIds = []
     for (const filter of filters.values()) {
       if (filter.matcher(event)) {
+        filter.lastEventId = maybeFromEventIdString(event.eventId)
         subscriptionIds.push(filter.id)
       }
     }
@@ -196,7 +197,6 @@ function createEvent({position: id, subscriptionIds}: SelectorsNotification): Ev
    */
   const data = subscriptionIds.join(",")
   return {
-    retry: SSE_RETRY,
     event: "Subscriptions Triggered",
     id,
     data
