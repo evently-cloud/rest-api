@@ -89,9 +89,8 @@ async function handleEventNotify(logger:    P.Logger,
                                  sql:       Sql,
                                  listeners: NotifyMap,
                                  row = "") {
-  // don't send event if no listeners
   if (listeners.size > 0) {
-    logger.info(`listener count: ${listeners.size}`)
+    logger.debug(`listener count: ${listeners.size}`)
     let eventRow = rowToEventRow(row)
     const missingMeta = eventRow.meta === undefined
     const missingData = eventRow.data === undefined

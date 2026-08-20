@@ -45,7 +45,7 @@ export function createChannel(registrar: NotifyListenerRegistrar, id: string): C
     id,
     registered: false,
     listener: createChannelListener(filters, subscribers),
-    timer: new ResettableTimer(() => handleClose(registrar, channel, subscribers), SSE_RETRY * 4000)
+    timer: new ResettableTimer(() => handleClose(registrar, channel, subscribers), SSE_RETRY * 4)
   }
 
   return {
@@ -224,7 +224,7 @@ function openEventStream({timer}:       ChannelState,
         subscriptionIds,
         position: eventIdToString(id)
       })
-      stream.next(event)
+      subscriber.push(event)
     }
   }
 
@@ -234,12 +234,9 @@ function openEventStream({timer}:       ChannelState,
 
 function createNotifySelectorFilter(filters: FilterMap): PersistedEventToMessage {
   return (event) => {
-console.info(`start notify, event TS: ${event.timestamp.toString()}, filters: ${filters.size}` )
     const subscriptionIds = filters.values()
       .filter((filter) => {
-console.info(`checking filter ${JSON.stringify(filter.selector)}`)
         if (filter.matcher(event)) {
-console.info("  notify matched, event TS", filter.lastEventId?.timestamp.toString())
           filter.lastEventId = maybeFromEventIdString(event.eventId)
           return true
         }

@@ -135,7 +135,7 @@ async function tryAppendResult(logger:          P.Logger,
   ${selector}::BYTEA
 ) AS event_id`
     const eventTs = maybeFromEventIdString(eventId)
-    logger.info(`appended event, ts: ${eventTs?.timestamp.toString()}`)
+    logger.debug(`appended event, ts: ${eventTs?.timestamp.toString()}, eventId: ${eventId}`)
     return {
       status: Result.SUCCESS,
       ok: {
