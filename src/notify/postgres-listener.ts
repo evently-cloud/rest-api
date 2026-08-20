@@ -5,52 +5,27 @@ import { Sql } from "postgres"
 
 import { fromPostgresString } from "../db/selector-sql.ts"
 import { eventIdToString } from "../eventId-utils.ts"
-import { EventListener, EventListenerRegistrar } from "./notify.ts"
+import { NotifyListener, NotifyListenerRegistrar } from "./notify.ts"
 import { PersistedEvent } from "../api/type/persisted-event.ts"
-import { EventID, ShutdownHookRegistrar, SSE_RETRY, UnknownObject } from "../types.ts"
-import { ResettableTimer } from "./resettable-timer.ts"
+import { EventID, ShutdownHookRegistrar, UnknownObject } from "../types.ts"
+
+
+type NotifyMap = Map<string, NotifyListener>
 
 
 export async function init(shutdown:  ShutdownHookRegistrar,
                            logger:    P.Logger,
-                           sql:       Sql): Promise<EventListenerRegistrar> {
+                           sql:       Sql): Promise<NotifyListenerRegistrar> {
   logger.info("init Postgres Event Notifier")
-  const listeners: EventListener[] = []
-
-  function clearEventListeners(listeners: EventListener[]) {
-    if (listeners.length === 1) {
-      listeners.pop()
-    }
-  }
-
-  const lastRemove: ResettableTimer<[EventListener[]]> = new ResettableTimer(clearEventListeners, SSE_RETRY * 4000, listeners)
-  lastRemove.cancel()
+  const listeners = new Map<string, NotifyListener>()
 
   // will re-attach listener if DB goes down and then comes back up
-  const listener = await sql.listen("ALL_EVENTS", (r) => handleEventNotify(logger, sql, listeners, r))
+  const listener = await sql.listen("ALL_EVENTS", (r?: string) => handleEventNotify(logger, sql, listeners, r))
   shutdown("Postgres Event Listener", listener.unlisten)
 
   return {
-    addEventListener: (l) => addEventListener(listeners, lastRemove, l),
-    removeEventListener: (l, d) => removeEventListener(listeners, lastRemove, l, d)
-  }
-}
-
-
-function addEventListener(listeners: EventListener[], timeout: ResettableTimer<any>, listener: EventListener) {
-  listeners.push(listener)
-  timeout.cancel()
-}
-
-
-function removeEventListener(listeners: EventListener[], timeout: ResettableTimer<any>, listener: EventListener, disconnect: boolean) {
-  const pos = listeners.indexOf(listener)
-  if (pos > -1) {
-    if (disconnect && listeners.length === 1) {
-      timeout.start()
-    } else {
-      listeners.splice(pos, 1)
-    }
+    addListener:    (id, l) => listeners.set(id, l),
+    removeListener: (id) => listeners.delete(id)
   }
 }
 
@@ -112,10 +87,11 @@ async function fetchMissingEventColumns(sql:      Sql,
 
 async function handleEventNotify(logger:    P.Logger,
                                  sql:       Sql,
-                                 listeners: EventListener[],
+                                 listeners: NotifyMap,
                                  row = "") {
   // don't send event if no listeners
-  if (listeners.length > 0) {
+  if (listeners.size > 0) {
+    logger.info(`listener count: ${listeners.size}`)
     let eventRow = rowToEventRow(row)
     const missingMeta = eventRow.meta === undefined
     const missingData = eventRow.data === undefined

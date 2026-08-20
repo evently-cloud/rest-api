@@ -6,7 +6,7 @@ import { Sql } from "postgres"
 
 import { Ledger, Selector, ShutdownHookRegistrar } from "../types.ts"
 import { createChannel } from "./channel.ts"
-import { Channel, Channels, EventListenerRegistrar } from "./notify.ts"
+import { Channel, Channels, NotifyListenerRegistrar } from "./notify.ts"
 import * as notifyRegistrar from "./postgres-listener.ts"
 
 
@@ -51,7 +51,7 @@ function getChannel(channels:   ChannelsMap,
 }
 
 
-function handleOpenChannel(registrar: EventListenerRegistrar,
+function handleOpenChannel(registrar: NotifyListenerRegistrar,
                            channels:  ChannelsMap,
                            ledger:    Ledger): string {
   const channelId = createId()

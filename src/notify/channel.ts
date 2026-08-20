@@ -1,15 +1,22 @@
-import {createId} from "@paralleldrive/cuid2"
+import { createId } from "@paralleldrive/cuid2"
 import { EventMessage } from "fastify-sse-v2"
-import { IterableWeakSet } from "weakref"
 
 import { PersistedEvent } from "../api/type/persisted-event.ts"
 import { asyncify, MessagePush } from "../asyncify.ts"
 import { eventIdToString, maybeFromEventIdString } from "../eventId-utils.ts"
 import { encodeFilterSelector } from "../selector-utils.ts"
-import { EventID, Selector } from "../types.ts"
-import { Channel, EventListener, EventListenerRegistrar, SelectorsNotification } from "./notify.ts"
+import { EventID, Selector, SSE_RETRY } from "../types.ts"
+import { Channel, NotifyListener, NotifyListenerRegistrar, SelectorsNotification } from "./notify.ts"
+import { ResettableTimer } from "./resettable-timer.ts"
 import { createMatcher, SelectorMatcher } from "./selector-matcher.ts"
 
+
+type ChannelState = {
+  id:         string
+  registered: boolean
+  listener:   NotifyListener
+  timer:      ResettableTimer<[]>
+}
 
 type SubscriptionFilter = {
   id:           string
@@ -21,27 +28,64 @@ type SubscriptionFilter = {
 // key is compressed encoded selector, so we can handle idempotent subscriptions
 type FilterMap = Map<string, SubscriptionFilter>
 type SSEStream = AsyncIterableIterator<EventMessage>
-type PersistedToEventMessage = (event: PersistedEvent) => EventMessage | undefined
+type MessagePusher = MessagePush<EventMessage>
+type PersistedEventToMessage = (event: PersistedEvent) => EventMessage | undefined
+
+type Subscriber = {
+  stream: SSEStream
+  push:   MessagePusher
+}
 
 
-export function createChannel(registrar: EventListenerRegistrar, id: string): Channel {
+export function createChannel(registrar: NotifyListenerRegistrar, id: string): Channel {
 
   const filters = new Map<string, SubscriptionFilter>()
-  // weak set because the client can close their side at any time. Weakness will clean those up.
-  const sseStreams = new IterableWeakSet<SSEStream>()
+  const subscribers = new Set<Subscriber>()
+  const channel = {
+    id,
+    registered: false,
+    listener: createChannelListener(filters, subscribers),
+    timer: new ResettableTimer(() => handleClose(registrar, channel, subscribers), SSE_RETRY * 4000)
+  }
 
   return {
     id,
-    subscribe:        (s) => handleSubscribe(filters, s),
+    subscribe:        (s) => handleSubscribe(registrar, channel, filters, s),
     unsubscribe:      (s) => handleUnsubscribe(filters, s),
-    subscriptions:    () => getSubscriptions(filters),
+    subscriptions:    () => getSubscriptionIds(filters),
     subscription:     (sid) => getSubscription(filters, sid),
-    openEventStream:  (a?) => openEventStream(registrar, filters, sseStreams, a),
-    close:            () => handleClose(sseStreams)
+    openEventStream:  (a?) => openEventStream(channel, filters, subscribers, a),
+    close:            () => handleClose(registrar, channel, subscribers)
   }
 }
 
-function findFilter(filters: Map<string, SubscriptionFilter>, subscriptionId: string): { key: string, selector: Selector } | undefined {
+
+function createChannelListener(filters:     FilterMap,
+                               subscribers: Set<Subscriber>): NotifyListener {
+  const filtersProcessor = createNotifySelectorFilter(filters)
+
+  return (event) => {
+    const eventMessage = filtersProcessor(event)
+    if (eventMessage) {
+      subscribers.forEach(({push}) => push(eventMessage))
+    }
+  }
+}
+
+// called when subscribe() is called. Late binding to Postgres
+function registerChannelListener(registrar: NotifyListenerRegistrar,
+                                 channel:   ChannelState) {
+  const {id, timer, registered, listener} = channel
+  timer.cancel()
+  if (!registered) {
+    registrar.addListener(id, listener)
+  }
+  channel.registered = true
+}
+
+
+function findFilter(filters:        FilterMap,
+                    subscriptionId: string): { key: string, selector: Selector } | undefined {
   for (const [key, filter] of filters) {
     const {id, selector} = filter
     if (id === subscriptionId) {
@@ -50,17 +94,29 @@ function findFilter(filters: Map<string, SubscriptionFilter>, subscriptionId: st
   }
 }
 
-async function handleClose(sseConnections: Iterable<SSEStream>){
+async function handleClose(registrar:   NotifyListenerRegistrar,
+                           channel:     ChannelState,
+                           subscribers: Set<Subscriber>){
+  channel.timer.cancel()
+  if (channel.registered) {
+    registrar.removeListener(channel.id)
+    channel.registered = false
+  }
+
   const closers: Promise<unknown>[] = []
-  for (const sse of sseConnections) {
-    // sse listener unregisters itself onClose
-    sse.return && closers.push(sse.return())
+  for (const sub of subscribers) {
+    const {stream} = sub
+    stream.return && closers.push(stream.return())
   }
   await Promise.allSettled(closers)
+  subscribers.clear()
 }
 
 
-function handleSubscribe(filters: FilterMap, selectorIn: Selector) {
+function handleSubscribe(registrar:   NotifyListenerRegistrar,
+                         channel:     ChannelState,
+                         filters:     FilterMap,
+                         selectorIn:  Selector) {
   // drop 'limit', retain 'after' for lastEventId
   const {
     limit,
@@ -81,11 +137,14 @@ function handleSubscribe(filters: FilterMap, selectorIn: Selector) {
     }
     filters.set(key, filter)
   }
+
+  registerChannelListener(registrar, channel)
   return id
 }
 
 
-function handleUnsubscribe(filters: FilterMap, subscriptionId: string) {
+function handleUnsubscribe(filters:         FilterMap,
+                           subscriptionId:  string) {
   const filter = findFilter(filters, subscriptionId)
   if (filter) {
     filters.delete(filter.key)
@@ -93,12 +152,15 @@ function handleUnsubscribe(filters: FilterMap, subscriptionId: string) {
 }
 
 
-function getSubscriptions(filters: FilterMap) {
-  return Array.from(filters.values(), filter => filter.id)
+function getSubscriptionIds(filters: FilterMap) {
+  return filters.values()
+    .map(filter => filter.id)
+    .toArray()
 }
 
 
-function getSubscription(filters: FilterMap, subscriptionId: string) {
+function getSubscription(filters:         FilterMap,
+                         subscriptionId:  string) {
   const filter = findFilter(filters, subscriptionId)
   if (filter) {
     return filter.selector
@@ -106,31 +168,38 @@ function getSubscription(filters: FilterMap, subscriptionId: string) {
 }
 
 
-function openEventStream(registrar:     EventListenerRegistrar,
+function openEventStream({timer}:       ChannelState,
                          filters:       FilterMap,
-                         sseStreams:    WeakSet<SSEStream>,
+                         subscribers:   Set<Subscriber>,
                          afterHeader?:  string): AsyncIterableIterator<EventMessage> {
+  timer.cancel()
 
-  const notificationToSse = createNotifySelectorFilter(filters)
-  const listenToNotify = async (push: MessagePush<EventMessage>) => {
-    const listener: EventListener = (e) => {
-      const eventMessage = notificationToSse(e)
-      if (eventMessage) {
-        push(eventMessage)
-      }
-    }
-    registrar.addEventListener(listener)
-    return listener
+  const listenToChannel = async (push: MessagePusher) => {
+    subscriber.push = push
+    return push
   }
 
-  // consider switching to https://github.com/rolftimmermans/event-iterator
-  const stream = asyncify(listenToNotify, {
-    onClose: (listener, value) => {
-      registrar.removeEventListener(listener, "disconnected" === value)
+  // this gets fully initialized by the end of the method
+  //@ts-ignore
+  const subscriber: Subscriber = { }
+
+  // consider switching asyncify to https://github.com/rolftimmermans/event-iterator
+  const stream = asyncify(listenToChannel, {
+    onClose: (p, value) => {
+      const sub = subscribers
+        .values()
+        .find((s) => p === s.push)
+      if (sub) {
+        subscribers.delete(sub)
+      }
+      if ("disconnected" === value && subscribers.size === 0) {
+        timer.reset()
+      }
     }
   })
 
-  sseStreams.add(stream)
+  subscriber.stream = stream
+  subscribers.add(subscriber)
 
   // Did the client send Last-Event-Id header? If so, maybe send a notification message so they can catch up.
   if (afterHeader) {
@@ -163,15 +232,20 @@ function openEventStream(registrar:     EventListenerRegistrar,
 }
 
 
-function createNotifySelectorFilter(filters: FilterMap): PersistedToEventMessage {
+function createNotifySelectorFilter(filters: FilterMap): PersistedEventToMessage {
   return (event) => {
-    const subscriptionIds = []
-    for (const filter of filters.values()) {
-      if (filter.matcher(event)) {
-        filter.lastEventId = maybeFromEventIdString(event.eventId)
-        subscriptionIds.push(filter.id)
-      }
-    }
+console.info(`start notify, event TS: ${event.timestamp.toString()}, filters: ${filters.size}` )
+    const subscriptionIds = filters.values()
+      .filter((filter) => {
+console.info(`checking filter ${JSON.stringify(filter.selector)}`)
+        if (filter.matcher(event)) {
+console.info("  notify matched, event TS", filter.lastEventId?.timestamp.toString())
+          filter.lastEventId = maybeFromEventIdString(event.eventId)
+          return true
+        }
+      })
+      .map((f) => f.id)
+      .toArray()
 
     if (subscriptionIds.length) {
       return createEvent({

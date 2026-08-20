@@ -4,13 +4,13 @@ import { PersistedEvent } from "../api/type/persisted-event.ts"
 import { Ledger, Selector } from "../types.ts"
 
 
-export interface EventListenerRegistrar {
-  addEventListener(listener: EventListener): void
-  removeEventListener(listener: EventListener, disconnect: boolean): void
+export interface NotifyListenerRegistrar {
+  addListener(id: string, listener: NotifyListener): void
+  removeListener(id: string): void
 }
 
 
-export type EventListener = (event: PersistedEvent) => void
+export type NotifyListener = (event: PersistedEvent) => void
 
 
 export type SelectorsNotification = {
