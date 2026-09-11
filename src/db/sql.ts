@@ -35,6 +35,7 @@ export async function init(shutdown:  ShutdownHookRegistrar,
   }
   const typeOpts = {
     ssl,
+    fetch_types: false,
     types: {
       bigint: longType
     }
@@ -98,8 +99,7 @@ function gatherConfig(logger: P.Logger, typeOpts: Options<any>): string | Option
 function omitEmpty<T extends UnknownObject>(obj: T): Partial<T> {
   const newObj: Partial<T> = {}
   for (const [key, value] of Object.entries(obj) as [keyof T, T[keyof T]][]) {
-    // omit empty strings.
-    if (value) {
+    if (value !== undefined && value !== "") {
       newObj[key] = value
     }
   }
