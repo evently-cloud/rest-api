@@ -5,6 +5,7 @@ import createHttpError from "http-errors"
 import { Ledgers } from "../../ledgers/index.ts"
 import { REQUEST_CTX } from "../constants.ts"
 import { processAuth } from "./header-validator.ts"
+import AuthorizationHeaderSchema from "../../../schema/authorization-header.json" with { type: "json" }
 
 
 export enum Permission {
@@ -79,7 +80,7 @@ export interface Authorization {
 export const authHeadersSchema = {
   schema: {
     headers: {
-      $ref: "auth-token"
+      ...AuthorizationHeaderSchema
     }
   }
 }

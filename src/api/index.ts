@@ -17,7 +17,6 @@ import { Ledger, ShutdownHookRegistrar, SSE_RETRY } from "../types.ts"
 import { initAuth, Role } from "./auth/index.ts"
 import { HEADERS } from "./constants.ts"
 import { initRestEndpoints } from "./rest-endpoints.ts"
-import AuthorizationHeaderSchema from "../../schema/authorization-header.json" with { type: "json" }
 
 
 // Add ledger access to request context.
@@ -49,8 +48,6 @@ export function launch(shutdown:  ShutdownHookRegistrar,
       maxParamLength:       2048  // default is 100
     }
   }) as unknown as FastifyInstance  // fastify type def is horrendous
-
-  server.addSchema(AuthorizationHeaderSchema)
 
   server.register(fastifyCors, {
     maxAge:           -1,  // Using -1 for browser testing; 1 day = 86_400 (firefox), 10 minutes = 600 (chrome)

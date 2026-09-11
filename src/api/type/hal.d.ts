@@ -26,7 +26,7 @@ export interface ResourceObject {
    */
   _links?: {
     curies?: CuriesLink | CuriesLink[]
-    [k: string]: LinkObject | LinkObject[]
+    [k: string]: LinkObject | LinkObject[] | CuriesLink | CuriesLink[] | undefined
   }
   /**
    * It is an object whose property names are link relation types (as defined by [RFC5988]) and values are either a Resource Object or an array of Resource Objects. Embedded Resources MAY be a full, partial, or inconsistent version of the representation served from the target URI.
