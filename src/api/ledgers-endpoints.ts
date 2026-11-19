@@ -347,9 +347,7 @@ function downloadSelector(body: DownloadLedgerLookup): Selector {
     after: afterStr,
     limit
   } = body
-  const after = afterStr && afterStr.length > 0
-    ? maybeFromEventIdString(afterStr)
-    : undefined
+  const after = maybeFromEventIdString(afterStr)
 
   return {
     after,

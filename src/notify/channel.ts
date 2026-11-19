@@ -6,7 +6,7 @@ import { asyncify, MessagePush } from "../asyncify.ts"
 import { eventIdToString, maybeFromEventIdString } from "../eventId-utils.ts"
 import { encodeFilterSelector } from "../selector-utils.ts"
 import { EventID, Selector, SSE_RETRY } from "../types.ts"
-import { Channel, NotifyListener, NotifyListenerRegistrar, SelectorsNotification } from "./notify.ts"
+import { Channel, NotifyListener, NotifyListenerRegistrar, SelectorsNotification, ChannelEventStream } from "./notify.ts"
 import { ResettableTimer } from "./resettable-timer.ts"
 import { createMatcher, SelectorMatcher } from "./selector-matcher.ts"
 
@@ -27,20 +27,20 @@ type SubscriptionFilter = {
 
 // key is compressed encoded selector, so we can handle idempotent subscriptions
 type FilterMap = Map<string, SubscriptionFilter>
-type SSEStream = AsyncIterableIterator<EventMessage>
+type SubscriberSet = Set<Subscriber>
 type MessagePusher = MessagePush<EventMessage>
 type PersistedEventToMessage = (event: PersistedEvent) => EventMessage | undefined
 
 type Subscriber = {
-  stream: SSEStream
+  stream: ChannelEventStream
   push:   MessagePusher
 }
 
 
 export function createChannel(registrar: NotifyListenerRegistrar, id: string): Channel {
 
-  const filters = new Map<string, SubscriptionFilter>()
-  const subscribers = new Set<Subscriber>()
+  const filters: FilterMap = new Map()
+  const subscribers: SubscriberSet = new Set()
   const channel = {
     id,
     registered: false,
@@ -61,7 +61,7 @@ export function createChannel(registrar: NotifyListenerRegistrar, id: string): C
 
 
 function createChannelListener(filters:     FilterMap,
-                               subscribers: Set<Subscriber>): NotifyListener {
+                               subscribers: SubscriberSet): NotifyListener {
   const filtersProcessor = createNotifySelectorFilter(filters)
 
   return (event) => {
@@ -96,7 +96,7 @@ function findFilter(filters:        FilterMap,
 
 async function handleClose(registrar:   NotifyListenerRegistrar,
                            channel:     ChannelState,
-                           subscribers: Set<Subscriber>){
+                           subscribers: SubscriberSet){
   channel.timer.cancel()
   if (channel.registered) {
     registrar.removeListener(channel.id)
@@ -170,8 +170,8 @@ function getSubscription(filters:         FilterMap,
 
 function openEventStream({timer}:       ChannelState,
                          filters:       FilterMap,
-                         subscribers:   Set<Subscriber>,
-                         afterHeader?:  string): AsyncIterableIterator<EventMessage> {
+                         subscribers:   SubscriberSet,
+                         afterHeader?:  string): ChannelEventStream {
   timer.cancel()
 
   const listenToChannel = async (push: MessagePusher) => {
@@ -201,30 +201,31 @@ function openEventStream({timer}:       ChannelState,
   subscriber.stream = stream
   subscribers.add(subscriber)
 
-  // Did the client send Last-Event-Id header? If so, maybe send a notification message so they can catch up.
   if (afterHeader) {
     const afterId = maybeFromEventIdString(afterHeader)
-    let id = afterId as EventID
-    const {timestamp: afterTs} = id
-    const subscriptionIds = filters.values()
-      .filter((f) => {
-        const {lastEventId} = f
-        if (lastEventId?.timestamp.greaterThan(afterTs)) {
-          // capture the most recent event id
-          if (lastEventId.timestamp.greaterThan(id.timestamp)) {
-            id = lastEventId
+    if (afterId) {
+      let id = afterId
+      const {timestamp: afterTs} = id
+      const subscriptionIds = filters.values()
+        .filter((f) => {
+          const {lastEventId} = f
+          if (lastEventId?.timestamp.greaterThan(afterTs)) {
+            // capture the most recent event id
+            if (lastEventId.timestamp.greaterThan(id.timestamp)) {
+              id = lastEventId
+            }
+            return true
           }
-          return true
-        }
-      })
-      .map((f) => f.id)
-      .toArray()
-    if (subscriptionIds.length) {
-      const event = createEvent({
-        subscriptionIds,
-        position: eventIdToString(id)
-      })
-      subscriber.push(event)
+        })
+        .map((f) => f.id)
+        .toArray()
+      if (subscriptionIds.length) {
+        const event = createEvent({
+          subscriptionIds,
+          position: eventIdToString(id)
+        })
+        subscriber.push(event)
+      }
     }
   }
 

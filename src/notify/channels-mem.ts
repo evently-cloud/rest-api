@@ -1,12 +1,11 @@
 import { createId } from "@paralleldrive/cuid2"
-import { EventMessage } from "fastify-sse-v2"
 import createHttpError from "http-errors"
 import P from "pino"
 import { Sql } from "postgres"
 
 import { Ledger, Selector, ShutdownHookRegistrar } from "../types.ts"
 import { createChannel } from "./channel.ts"
-import { Channel, Channels, NotifyListenerRegistrar } from "./notify.ts"
+import { Channel, ChannelEventStream, Channels, NotifyListenerRegistrar } from "./notify.ts"
 import * as notifyRegistrar from "./postgres-listener.ts"
 
 
@@ -80,7 +79,7 @@ async function handleCloseChannel(channels:   ChannelsMap,
 function handleOpenEventStream(channels:      ChannelsMap,
                                ledger:        Ledger,
                                channelId:     string,
-                               lastEventId?:  string): AsyncIterableIterator<EventMessage> {
+                               lastEventId?:  string): ChannelEventStream {
   const channel = getChannel(channels, ledger, channelId)
   return channel.openEventStream(lastEventId)
 }

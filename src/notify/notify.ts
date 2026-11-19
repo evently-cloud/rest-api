@@ -12,6 +12,7 @@ export interface NotifyListenerRegistrar {
 
 export type NotifyListener = (event: PersistedEvent) => void
 
+export type ChannelEventStream = AsyncIterableIterator<EventMessage>
 
 export type SelectorsNotification = {
   subscriptionIds:  string[]
@@ -38,7 +39,7 @@ export interface Channel {
 
   subscription(subscriptionId: string): Selector | undefined
 
-  openEventStream(lastEventId?: string): AsyncIterableIterator<EventMessage>
+  openEventStream(lastEventId?: string): ChannelEventStream
 
   close(): Promise<void>
 }
@@ -61,7 +62,7 @@ export interface Channels {
 
   subscription(ledger: Ledger, channelId: string, subscriptionId: string): Selector | undefined
 
-  openEventStream(ledger: Ledger, channelId: string, lastEventId?: string): AsyncIterableIterator<EventMessage>
+  openEventStream(ledger: Ledger, channelId: string, lastEventId?: string): ChannelEventStream
 
   close(ledger: Ledger, channelId: string): Promise<void>
 }
